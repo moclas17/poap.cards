@@ -4,7 +4,7 @@ import { getSessionUser } from '@/lib/auth/session'
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { cardId: string } }
+  { params }: { params: Promise<{ cardId: string }> }
 ) {
   try {
     const user = await getSessionUser(request)
@@ -12,7 +12,7 @@ export async function DELETE(
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const { cardId } = params
+    const { cardId } = await params
 
     // First check if the card belongs to the user
     const { data: card, error: fetchError } = await supabaseAdmin
