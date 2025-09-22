@@ -37,13 +37,6 @@ export default function CardsPage() {
     setIsChromeAndroid(isAndroid && isChrome)
   }, [])
 
-  // Load user's cards when authenticated
-  useEffect(() => {
-    if (isAuthenticated) {
-      loadCards()
-    }
-  }, [isAuthenticated, loadCards])
-
   const loadCards = useCallback(async () => {
     if (!address) return
 
@@ -61,6 +54,13 @@ export default function CardsPage() {
       console.error('Failed to load cards:', error)
     }
   }, [address])
+
+  // Load user's cards when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      loadCards()
+    }
+  }, [isAuthenticated, loadCards])
 
   const handleNfcRead = async () => {
     console.log('User clicked scan button')
