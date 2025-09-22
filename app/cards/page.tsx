@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useAccount } from 'wagmi'
 import { Header } from '@/components/layout/header'
 import { useAuth } from '@/lib/auth/use-auth'
@@ -42,9 +42,9 @@ export default function CardsPage() {
     if (isAuthenticated) {
       loadCards()
     }
-  }, [isAuthenticated])
+  }, [isAuthenticated, loadCards])
 
-  const loadCards = async () => {
+  const loadCards = useCallback(async () => {
     if (!address) return
 
     try {
@@ -60,7 +60,7 @@ export default function CardsPage() {
     } catch (error) {
       console.error('Failed to load cards:', error)
     }
-  }
+  }, [address])
 
   const handleNfcRead = async () => {
     console.log('User clicked scan button')
@@ -317,7 +317,7 @@ export default function CardsPage() {
                     </div>
                     {isChromeAndroid && (
                       <div className="text-sm mt-2">
-                        <p className="text-blue-600">📱 Click "Scan NFC" and tap your NFC card to read the UID</p>
+                        <p className="text-blue-600">📱 Click &quot;Scan NFC&quot; and tap your NFC card to read the UID</p>
                       </div>
                     )}
                   </div>
