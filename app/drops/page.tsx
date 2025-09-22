@@ -4,21 +4,25 @@ import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { Header } from '@/components/layout/header'
 import { DropStats } from '@/types/api'
+import { useAuth } from '@/lib/auth/use-auth'
 
 export default function DropsPage() {
   const { isConnected } = useAccount()
+  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [drops, setDrops] = useState<DropStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('Drops page effect - isConnected:', isConnected)
+    console.log('Drops page effect - isConnected:', isConnected, 'isAuthenticated:', isAuthenticated, 'authLoading:', authLoading)
 
-    if (isConnected) {
-      console.log('✅ Connected, fetching drops...')
+    if (isAuthenticated && !authLoading) {
+      console.log('✅ Connected and authenticated, fetching drops...')
       fetchDrops()
+    } else if (!authLoading) {
+      setLoading(false)
     }
-  }, [isConnected])
+  }, [isConnected, isAuthenticated, authLoading])
 
   const fetchDrops = async () => {
     try {
@@ -58,7 +62,17 @@ export default function DropsPage() {
                 Please connect your wallet to view your POAP drops.
               </p>
             </div>
-          ) : loading ? (
+          ) : !isAuthenticated && !authLoading ? (
+            <div className="card text-center py-12">
+              <div className="text-6xl mb-4">🔒</div>
+              <h3 className="text-xl font-semibold text-gray-800 mb-2">
+                Authentication Required
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Please sign the authentication message to access your POAP drops.
+              </p>
+            </div>
+          ) : loading || authLoading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading drops...</p>
