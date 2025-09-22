@@ -10,6 +10,14 @@ if (!process.env.NEXT_PUBLIC_REOWN_PROJECT_ID) {
   console.warn('NEXT_PUBLIC_REOWN_PROJECT_ID is not set')
 }
 
+// Set up metadata
+const metadata = {
+  name: 'POAP Card',
+  description: 'Dispense POAPs with NFC cards using secure dynamic messaging',
+  url: process.env.NEXT_PUBLIC_APP_URL || 'https://0xpo.app',
+  icons: ['https://avatars.githubusercontent.com/u/37784886']
+}
+
 // Set up the Wagmi Adapter (Config)
 export const wagmiAdapter = new WagmiAdapter({
   storage: createStorage({
@@ -20,14 +28,6 @@ export const wagmiAdapter = new WagmiAdapter({
   networks: [mainnet, sepolia]
 })
 
-// Set up metadata
-const metadata = {
-  name: 'POAP Card',
-  description: 'Dispense POAPs with NFC cards using secure dynamic messaging',
-  url: process.env.NEXT_PUBLIC_APP_URL || 'https://0xpo.app',
-  icons: ['https://avatars.githubusercontent.com/u/37784886']
-}
-
 // Create the modal
 export const modal = createAppKit({
   adapters: [wagmiAdapter],
@@ -35,14 +35,14 @@ export const modal = createAppKit({
   networks: [mainnet, sepolia],
   metadata,
   features: {
-    email: false, // Disable email login as per requirements
-    socials: [], // No social logins
+    email: false,
+    socials: [],
     swaps: false,
     onramp: false
   },
   themeMode: 'light',
   themeVariables: {
-    '--w3m-accent': '#6E56CF', // Primary purple color
+    '--w3m-accent': '#6E56CF'
   }
 })
 
