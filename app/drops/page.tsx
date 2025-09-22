@@ -4,25 +4,25 @@ import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { Header } from '@/components/layout/header'
 import { DropStats } from '@/types/api'
-import { useAuth } from '@/lib/auth/use-auth'
+import { NewDropForm } from '@/components/drops/new-drop-form'
 
 export default function DropsPage() {
   const { isConnected } = useAccount()
-  const { isAuthenticated, isLoading: authLoading } = useAuth()
   const [drops, setDrops] = useState<DropStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [showNewDropForm, setShowNewDropForm] = useState(false)
 
   useEffect(() => {
-    console.log('Drops page effect - isConnected:', isConnected, 'isAuthenticated:', isAuthenticated, 'authLoading:', authLoading)
+    console.log('Drops page effect - isConnected:', isConnected)
 
-    if (isAuthenticated && !authLoading) {
-      console.log('✅ Connected and authenticated, fetching drops...')
+    if (isConnected) {
+      console.log('✅ Connected, fetching drops...')
       fetchDrops()
-    } else if (!authLoading) {
+    } else {
       setLoading(false)
     }
-  }, [isConnected, isAuthenticated, authLoading])
+  }, [isConnected])
 
   const fetchDrops = async () => {
     try {
@@ -45,11 +45,22 @@ export default function DropsPage() {
 
       <main className="container mx-auto px-4 py-8">
         <div className="max-w-4xl mx-auto">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-primary mb-2">My Drops</h1>
-            <p className="text-gray-600">
-              Manage your POAP drops and monitor distribution
-            </p>
+          <div className="mb-8 flex justify-between items-center">
+            <div>
+              <h1 className="text-3xl font-bold text-primary mb-2">My Drops</h1>
+              <p className="text-gray-600">
+                Manage your POAP drops and monitor distribution
+              </p>
+            </div>
+
+            {isConnected && (
+              <button
+                onClick={() => setShowNewDropForm(true)}
+                className="btn-primary"
+              >
+                + New Drop
+              </button>
+            )}
           </div>
 
           {!isConnected ? (
@@ -62,17 +73,7 @@ export default function DropsPage() {
                 Please connect your wallet to view your POAP drops.
               </p>
             </div>
-          ) : !isAuthenticated && !authLoading ? (
-            <div className="card text-center py-12">
-              <div className="text-6xl mb-4">🔒</div>
-              <h3 className="text-xl font-semibold text-gray-800 mb-2">
-                Authentication Required
-              </h3>
-              <p className="text-gray-600 mb-6">
-                Please sign the authentication message to access your POAP drops.
-              </p>
-            </div>
-          ) : loading || authLoading ? (
+          ) : loading ? (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
               <p className="text-gray-600 mt-4">Loading drops...</p>
@@ -154,6 +155,15 @@ export default function DropsPage() {
           )}
         </div>
       </main>
+
+      <NewDropForm
+        isOpen={showNewDropForm}
+        onClose={() => setShowNewDropForm(false)}
+        onSuccess={() => {
+          fetchDrops()
+          setShowNewDropForm(false)
+        }}
+      />
     </div>
   )
 }

@@ -44,6 +44,7 @@ Core tables with RLS enabled:
 - `cards` - NFC cards (ntag_uid, owner_address)
 - `card_drop_assignments` - Links cards to drops
 - `card_reads` - SDM tap events (sdm_ctr, sdm_cmac, state: reserved/served/minted/invalid)
+- `poap_tokens` - OAuth2 access tokens for POAP API (access_token, expires_at)
 
 **Important**: All mutations use Supabase Service Role Key server-side. Client uses anon key for reads only.
 
@@ -88,8 +89,15 @@ JWT_SECRET=supersecret
 SDM_VERIFY_MODE=mock            # mock | strict
 K_MASTER_HEX=00000000000000000000000000000000  # 16 bytes hex
 
+# POAP API
+POAP_CLIENT_ID=y45LrIpUGVgj6NIIc795ltl8qzFvBCFw
+POAP_CLIENT_SECRET=01mtLNDKeKfn-tSU-D88c4C82jw07Vwel0necy7NfGw27zalqz39ovLzy5keg5sl
+POAP_API_KEY=4iwIMIpNiWkYSjcDszseg8eDTiFf5afbJ89CGv1syDiZjKcoSMov2rOF8Ulb5T4nUHQWtCpfbo7hi4Tgyuitzs79A8aL0Yrc34PBBT1cKFhOTQGpZSxZGKMuPxX6zHFH
+
+# Cron Security
+CRON_SECRET=your-secret-here
+
 # Optional
-POAP_API_TOKEN=
 RPC_MAINNET=
 ```
 
