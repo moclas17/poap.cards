@@ -4,23 +4,21 @@ import { useState, useEffect } from 'react'
 import { useAccount } from 'wagmi'
 import { Header } from '@/components/layout/header'
 import { DropStats } from '@/types/api'
-import { useAuth } from '@/lib/auth/use-auth'
 
 export default function DropsPage() {
   const { isConnected } = useAccount()
-  const { isAuthenticated } = useAuth()
   const [drops, setDrops] = useState<DropStats[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    console.log('Drops page effect - isConnected:', isConnected, 'isAuthenticated:', isAuthenticated)
+    console.log('Drops page effect - isConnected:', isConnected)
 
-    if (isAuthenticated) {
-      console.log('✅ Connected and authenticated, fetching drops...')
+    if (isConnected) {
+      console.log('✅ Connected, fetching drops...')
       fetchDrops()
     }
-  }, [isConnected, isAuthenticated])
+  }, [isConnected])
 
   const fetchDrops = async () => {
     try {
