@@ -1,14 +1,11 @@
 'use client'
 
-import { useAccount } from 'wagmi'
-import { useAppKit } from '@reown/appkit/react'
-import { ConnectButton } from '@/components/ui/connect-button'
+import { useAppKitAccount } from '@reown/appkit/react'
 import { Header } from '@/components/layout/header'
-import { useAuth } from '@/lib/auth/use-auth'
+import Link from 'next/link'
 
 export default function HomePage() {
-  const { address, isConnected } = useAccount()
-  const { isAuthenticated, isLoading } = useAuth()
+  const { address, isConnected } = useAppKitAccount()
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-green-50 to-blue-50">
@@ -23,7 +20,8 @@ export default function HomePage() {
               <span className="text-green-400">O</span>
               <span className="text-blue-400">A</span>
               <span className="text-yellow-400">P</span>
-              <span className="text-purple-600 ml-4">Card</span>
+              <span className="text-gray-700">.</span>
+              <span className="text-purple-600">Cards</span>
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               Dispense POAPs with NFC cards using secure dynamic messaging.
@@ -32,65 +30,33 @@ export default function HomePage() {
           </div>
 
           {/* Connection Status */}
-          <div className="mb-12">
-            {!isConnected ? (
-              <div className="text-center">
-                <ConnectButton />
-                <p className="text-gray-500 mt-4">
-                  Connect your wallet to get started
-                </p>
-              </div>
-            ) : isLoading ? (
-              <div className="bg-white rounded-xl p-8 shadow-sm border max-w-md mx-auto text-center">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600 mx-auto mb-4"></div>
-                <div className="text-purple-600 text-lg font-medium mb-2">
-                  Authenticating...
-                </div>
-                <p className="text-gray-600">
-                  Please sign the message in your wallet
-                </p>
-              </div>
-            ) : isAuthenticated ? (
+          {isConnected && (
+            <div className="mb-12">
               <div className="bg-white rounded-xl p-8 shadow-sm border max-w-md mx-auto">
                 <div className="text-green-600 text-lg font-medium mb-2">
-                  ✓ Authenticated
+                  ✅ Wallet Connected!
                 </div>
                 <p className="text-gray-600 mb-6">
                   {address && `${address.slice(0, 6)}...${address.slice(-4)}`}
                 </p>
 
                 <div className="space-y-3">
-                  <a
+                  <Link
                     href="/drops"
                     className="block w-full btn-primary text-center"
                   >
                     Manage My Drops
-                  </a>
-                  <a
+                  </Link>
+                  <Link
                     href="/cards"
                     className="block w-full btn-secondary text-center"
                   >
                     Manage My Cards
-                  </a>
+                  </Link>
                 </div>
               </div>
-            ) : (
-              <div className="bg-white rounded-xl p-8 shadow-sm border max-w-md mx-auto text-center">
-                <div className="text-orange-600 text-lg font-medium mb-2">
-                  🔐 Wallet Connected
-                </div>
-                <p className="text-gray-600 mb-4">
-                  Please sign the message to authenticate
-                </p>
-                <button
-                  onClick={() => window.location.reload()}
-                  className="btn-primary"
-                >
-                  Try Authentication Again
-                </button>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Features */}
           <div className="grid md:grid-cols-3 gap-8 max-w-4xl mx-auto">
@@ -126,6 +92,7 @@ export default function HomePage() {
           </div>
         </div>
       </main>
+
     </div>
   )
 }

@@ -8,13 +8,22 @@ export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('🔍 Starting drop creation...')
     const user = await requireAuth()
+    console.log('🔍 User authenticated:', user.address)
 
     const formData = await request.formData()
     const file = formData.get('file') as File
     const title = formData.get('title') as string
     const description = formData.get('description') as string
     const image = formData.get('image') as string
+
+    console.log('🔍 Form data received:', {
+      hasFile: !!file,
+      title,
+      description: description?.substring(0, 50) + '...',
+      image: image?.substring(0, 50) + '...'
+    })
 
     if (!file || !title) {
       return NextResponse.json(
@@ -37,6 +46,8 @@ export async function POST(request: NextRequest) {
       )
     })
 
+    console.log('🔍 Found URLs:', urls.length)
+
     if (urls.length === 0) {
       return NextResponse.json(
         { error: 'No valid POAP URLs found in file' },
@@ -44,21 +55,32 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Extract POAP event ID from first URL if possible
+    // Extract POAP event ID from first URL using API
     let poapEventId = null
     const firstUrl = urls[0]
     try {
-      // Try to extract event ID from URL or hash
       const hash = extractPoapHash(firstUrl)
       if (hash) {
-        // You could fetch event ID from POAP API here if needed
-        poapEventId = hash
+        // Get event_id from POAP API
+        const { PoapAuth } = await import('@/lib/poap/auth')
+        const metadata = await PoapAuth.getPoapMetadata(hash)
+        poapEventId = metadata.event?.id || null
+        console.log('🔍 Extracted event_id:', poapEventId)
       }
     } catch (error) {
       console.log('Could not extract POAP event ID:', error)
     }
 
     // Start transaction
+    console.log('🔍 Creating drop with data:', {
+      name: title,
+      description: description?.substring(0, 50) + '...',
+      image_url: image?.substring(0, 50) + '...',
+      poap_event_id: poapEventId,
+      owner_address: user.address.toLowerCase(),
+      total_codes: urls.length
+    })
+
     const { data: drop, error: dropError } = await supabaseAdmin
       .from('drops')
       .insert({
@@ -75,7 +97,7 @@ export async function POST(request: NextRequest) {
     if (dropError) {
       console.error('Drop creation error:', dropError)
       return NextResponse.json(
-        { error: 'Failed to create drop' },
+        { error: 'Failed to create drop', details: dropError.message },
         { status: 500 }
       )
     }
@@ -130,26 +152,21 @@ export async function POST(request: NextRequest) {
 
     console.error('Create drop API error:', error)
     return NextResponse.json(
-      { error: 'Internal server error' },
+      { error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     )
   }
 }
 
 function extractPoapHash(url: string): string | null {
-  const patterns = [
-    /poap\.xyz\/claim\/([a-zA-Z0-9]+)/i,
-    /poap\.xyz\/mint\/([a-zA-Z0-9]+)/i,
-    /app\.poap\.xyz\/claim\/([a-zA-Z0-9]+)/i,
-    /app\.poap\.xyz\/mint\/([a-zA-Z0-9]+)/i,
-    /poap\.delivery\/([a-zA-Z0-9]+)/i
-  ]
+  // Igual que en PHP: $qr_hash=substr(trim($link), -6);
+  // Toma los últimos 6 caracteres de la URL
+  const trimmedUrl = url.trim()
+  const qrHash = trimmedUrl.slice(-6)
 
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) {
-      return match[1]
-    }
+  // Validar que contiene solo caracteres alfanuméricos
+  if (/^[a-zA-Z0-9]{6}$/.test(qrHash)) {
+    return qrHash
   }
 
   return null

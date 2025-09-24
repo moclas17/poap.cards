@@ -46,6 +46,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(metadata)
 
   } catch (error) {
+    console.error('Preview API error:', error)
     return NextResponse.json(
       { error: 'Failed to fetch POAP metadata', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
@@ -54,78 +55,43 @@ export async function POST(request: NextRequest) {
 }
 
 function extractPoapHash(url: string): string | null {
-  // POAP URLs can be in different formats:
-  // https://poap.xyz/claim/abc123
-  // http://POAP.xyz/mint/abc123
-  // https://app.poap.xyz/claim/abc123
-  // https://poap.delivery/abc123
+  // Igual que en PHP: $qr_hash=substr(trim($link), -6);
+  // Toma los últimos 6 caracteres de la URL
+  const trimmedUrl = url.trim()
+  const qrHash = trimmedUrl.slice(-6)
 
-  const patterns = [
-    /poap\.xyz\/claim\/([a-zA-Z0-9]+)/i,
-    /poap\.xyz\/mint\/([a-zA-Z0-9]+)/i,
-    /app\.poap\.xyz\/claim\/([a-zA-Z0-9]+)/i,
-    /app\.poap\.xyz\/mint\/([a-zA-Z0-9]+)/i,
-    /poap\.delivery\/([a-zA-Z0-9]+)/i
-  ]
-
-  for (const pattern of patterns) {
-    const match = url.match(pattern)
-    if (match) {
-      return match[1]
-    }
+  // Validar que contiene solo caracteres alfanuméricos
+  if (/^[a-zA-Z0-9]{6}$/.test(qrHash)) {
+    return qrHash
   }
 
   return null
 }
 
 async function fetchPoapMetadata(hash: string): Promise<PoapMetadata> {
-  console.log('fetchPoapMetadata - Starting with hash:', hash)
+  const { PoapAuth } = await import('@/lib/poap/auth')
 
   try {
-    // Use scraping method (API auth has permission issues)
-    console.log('fetchPoapMetadata - Using scraping method...')
+    console.log('Fetching POAP metadata for hash:', hash)
+    const dataEvento = await PoapAuth.getPoapMetadata(hash)
+    console.log('POAP API response:', dataEvento)
 
-    // Try to get better metadata from collectors page
-    let claimResponse = await fetch(`https://collectors.poap.xyz/mint/${hash}`, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; POAP-Card-App/1.0)'
-      }
-    })
+    // Estructura similar al PHP: $dataEvento['event']['id']
+    const evento = dataEvento.event
 
-    if (!claimResponse.ok) {
-      claimResponse = await fetch(`https://poap.xyz/mint/${hash}`, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (compatible; POAP-Card-App/1.0)'
-        }
-      })
+    if (!evento) {
+      console.error('No event data in POAP response:', dataEvento)
+      throw new Error('Invalid POAP response - no event data')
     }
 
-    if (claimResponse.ok) {
-      const html = await claimResponse.text()
-
-      // Extract metadata from HTML meta tags
-      const titleMatch = html.match(/<meta property="og:title" content="([^"]+)"/i)
-      const descriptionMatch = html.match(/<meta property="og:description" content="([^"]+)"/i)
-      const imageMatch = html.match(/<meta property="og:image" content="([^"]+)"/i)
-
-      return {
-        title: titleMatch?.[1] || 'POAP Event',
-        description: descriptionMatch?.[1] || 'POAP Event Description',
-        image: imageMatch?.[1] || '/placeholder-poap.png',
-        event_id: 0
-      }
+    return {
+      title: evento?.name || 'POAP Event',
+      description: evento?.description || 'POAP Event Description',
+      image: evento?.image_url || '/placeholder-poap.png',
+      event_id: evento?.id || 0
     }
-
   } catch (error) {
-    console.error('fetchPoapMetadata - Scraping failed:', error)
-  }
-
-  // Return default metadata if all methods fail
-  console.log('fetchPoapMetadata - Returning default metadata')
-  return {
-    title: 'POAP Event',
-    description: 'POAP Event Description',
-    image: '/placeholder-poap.png',
-    event_id: 0
+    console.error('fetchPoapMetadata error:', error)
+    throw new Error(`Failed to fetch POAP metadata: ${error instanceof Error ? error.message : 'Unknown error'}`)
   }
 }

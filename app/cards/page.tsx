@@ -1,13 +1,15 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { useAccount } from 'wagmi'
+import { useAppKitAccount } from '@reown/appkit/react'
 import { Header } from '@/components/layout/header'
 import { useAuth } from '@/lib/auth/use-auth'
 
 interface Card {
   id: string
   ntag_uid: string
+  name: string
+  is_secure: boolean
   created_at: string
 }
 
@@ -20,14 +22,16 @@ declare global {
 }
 
 export default function CardsPage() {
-  const { isConnected, address } = useAccount()
+  const { isConnected, address } = useAppKitAccount()
   const { isAuthenticated } = useAuth()
   const [cardUid, setCardUid] = useState('')
+  const [cardName, setCardName] = useState('')
   const [loading, setLoading] = useState(false)
   const [nfcLoading, setNfcLoading] = useState(false)
   const [cards, setCards] = useState<Card[]>([])
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
   const [isChromeAndroid, setIsChromeAndroid] = useState(false)
+  const [securityStatus, setSecurityStatus] = useState<'secure' | 'not-secure' | 'unknown'>('unknown')
 
   // Detect Chrome Android
   useEffect(() => {
@@ -36,6 +40,52 @@ export default function CardsPage() {
     const isChrome = /Chrome/.test(userAgent) && !/Edg/.test(userAgent)
     setIsChromeAndroid(isAndroid && isChrome)
   }, [])
+
+  // Detect security status based on input
+  const detectSecurityStatus = (input: string): 'secure' | 'not-secure' | 'unknown' => {
+    if (!input.trim()) return 'unknown'
+
+    try {
+      // Check if input is a URL
+      if (input.includes('://')) {
+        const url = new URL(input)
+        const params = url.searchParams
+
+        // Secure: Has CMAC parameter (SDM with cryptographic verification)
+        if (params.has('cmac')) {
+          return 'secure'
+        }
+        // Not secure: Has 'x' separator or only UID parameter
+        else if (input.includes('x') || (params.has('uid') && !params.has('cmac'))) {
+          return 'not-secure'
+        }
+        // Has UID and CTR parameters but no CMAC
+        else if (params.has('uid') && params.has('ctr') && !params.has('cmac')) {
+          return 'not-secure'
+        }
+      } else {
+        // If it's just a UID string, check for 'x' separator
+        if (input.includes('x')) {
+          return 'not-secure'
+        }
+        // If it's a plain UID without separator, assume it's a basic card
+        if (input.length > 0) {
+          return 'not-secure'
+        }
+      }
+    } catch (error) {
+      // If URL parsing fails, check for 'x' separator
+      return input.includes('x') ? 'not-secure' : 'unknown'
+    }
+
+    return 'unknown'
+  }
+
+  // Update security status when cardUid changes
+  useEffect(() => {
+    const status = detectSecurityStatus(cardUid)
+    setSecurityStatus(status)
+  }, [cardUid])
 
   const loadCards = useCallback(async () => {
     if (!address) return
@@ -123,16 +173,25 @@ export default function CardsPage() {
             try {
               const url = new TextDecoder().decode(fullUrl.data)
               setCardUid(url) // Show full URL in input
-              setMessage({ type: 'success', text: `NFC card read successfully! UID: ${extractedUid}` })
+
+              // Detect security status and show appropriate message
+              const secStatus = detectSecurityStatus(url)
+              const securityMsg = secStatus === 'secure'
+                ? ' (🔒 Secure card detected)'
+                : secStatus === 'not-secure'
+                ? ' (⚠️ Non-secure card detected)'
+                : ''
+
+              setMessage({ type: 'success', text: `NFC card read successfully! UID: ${extractedUid}${securityMsg}` })
               console.log('Full URL set in input:', url)
               console.log('UID extracted for saving:', extractedUid)
             } catch (error) {
               setCardUid(extractedUid) // Fallback to just UID
-              setMessage({ type: 'success', text: `NFC card read successfully! UID: ${extractedUid}` })
+              setMessage({ type: 'success', text: `NFC card read successfully! UID: ${extractedUid} (⚠️ Non-secure card)` })
             }
           } else {
             setCardUid(extractedUid) // Fallback to just UID
-            setMessage({ type: 'success', text: `NFC card read successfully! UID: ${extractedUid}` })
+            setMessage({ type: 'success', text: `NFC card read successfully! UID: ${extractedUid} (⚠️ Non-secure card)` })
           }
         } else {
           setMessage({ type: 'error', text: 'Could not extract UID from NFC card' })
@@ -151,12 +210,12 @@ export default function CardsPage() {
 
   const handleClaimCard = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (!cardUid.trim()) return
+    if (!cardUid.trim() || !cardName.trim()) return
 
     setLoading(true)
     setMessage(null)
 
-    // Extract UID from URL if it's a full URL, otherwise use as-is
+    // Extract UID from URL if it's a full URL, otherwise clean raw UID
     let uidToSave = cardUid.trim()
 
     try {
@@ -168,9 +227,29 @@ export default function CardsPage() {
           uidToSave = extractedUid.toUpperCase()
           console.log('💾 Saving UID extracted from URL:', uidToSave)
         }
+      } else {
+        // Clean raw UID - remove everything after 'X' separator for non-secure cards
+        if (uidToSave.includes('X')) {
+          uidToSave = uidToSave.split('X')[0].toUpperCase()
+          console.log('💾 Saving cleaned UID (removed X suffix):', uidToSave)
+        } else if (uidToSave.includes('x')) {
+          uidToSave = uidToSave.split('x')[0].toUpperCase()
+          console.log('💾 Saving cleaned UID (removed x suffix):', uidToSave)
+        } else {
+          uidToSave = uidToSave.toUpperCase()
+        }
       }
     } catch (error) {
-      console.log('Not a URL, using value as-is:', uidToSave)
+      // Clean raw UID even if URL parsing fails
+      if (uidToSave.includes('X')) {
+        uidToSave = uidToSave.split('X')[0].toUpperCase()
+        console.log('💾 Saving cleaned UID (removed X suffix):', uidToSave)
+      } else if (uidToSave.includes('x')) {
+        uidToSave = uidToSave.split('x')[0].toUpperCase()
+        console.log('💾 Saving cleaned UID (removed x suffix):', uidToSave)
+      } else {
+        uidToSave = uidToSave.toUpperCase()
+      }
     }
 
     try {
@@ -180,7 +259,11 @@ export default function CardsPage() {
           'Content-Type': 'application/json',
           'x-wallet-address': address || ''
         },
-        body: JSON.stringify({ cardUid: uidToSave }),
+        body: JSON.stringify({
+          cardUid: uidToSave,
+          cardName: cardName.trim(),
+          originalUrl: cardUid.trim() // Send original input for security detection
+        }),
       })
 
       const data = await response.json()
@@ -191,6 +274,7 @@ export default function CardsPage() {
 
       setMessage({ type: 'success', text: 'Card claimed successfully!' })
       setCardUid('')
+      setCardName('')
       loadCards() // Reload the cards list
     } catch (err) {
       setMessage({
@@ -264,20 +348,83 @@ export default function CardsPage() {
 
                 <form onSubmit={handleClaimCard} className="space-y-4">
                   <div>
+                    <label htmlFor="cardName" className="block text-sm font-medium text-gray-700 mb-2">
+                      Card Name
+                    </label>
+                    <input
+                      type="text"
+                      id="cardName"
+                      value={cardName}
+                      onChange={(e) => setCardName(e.target.value)}
+                      placeholder="e.g., Event Card, My NFC Card, Conference Badge"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
+                      disabled={loading || nfcLoading}
+                      required
+                    />
+                  </div>
+
+                  <div>
                     <label htmlFor="cardUid" className="block text-sm font-medium text-gray-700 mb-2">
                       Card UID
                     </label>
                     <div className="space-y-3">
-                      <input
-                        type="text"
-                        id="cardUid"
-                        value={cardUid}
-                        onChange={(e) => setCardUid(e.target.value)}
-                        placeholder="https://card.0xpo.app/?uid=DEMOUID1234"
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
-                        disabled={loading || nfcLoading}
-                        required
-                      />
+                      <div className="relative">
+                        <input
+                          type="text"
+                          id="cardUid"
+                          value={cardUid}
+                          onChange={(e) => setCardUid(e.target.value)}
+                          placeholder="https://card.0xpo.app/?uid=DEMOUID1234"
+                          className={`w-full px-3 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:border-transparent ${
+                            securityStatus === 'secure'
+                              ? 'border-green-300 focus:ring-green-500'
+                              : securityStatus === 'not-secure'
+                              ? 'border-yellow-300 focus:ring-yellow-500'
+                              : 'border-gray-300 focus:ring-primary'
+                          }`}
+                          disabled={loading || nfcLoading}
+                          required
+                        />
+                        {securityStatus !== 'unknown' && cardUid.trim() && (
+                          <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                            {securityStatus === 'secure' ? (
+                              <div className="text-green-600" title="Secure card with CMAC verification">
+                                🔒
+                              </div>
+                            ) : (
+                              <div className="text-yellow-600" title="Card without SDM security">
+                                ⚠️
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Security Status Indicator */}
+                      {cardUid.trim() && securityStatus !== 'unknown' && (
+                        <div className={`p-3 rounded-lg text-sm ${
+                          securityStatus === 'secure'
+                            ? 'bg-green-50 text-green-800 border border-green-200'
+                            : 'bg-yellow-50 text-yellow-800 border border-yellow-200'
+                        }`}>
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">
+                              {securityStatus === 'secure' ? '🔒' : '⚠️'}
+                            </span>
+                            <div>
+                              <div className="font-medium">
+                                {securityStatus === 'secure' ? 'Secure Card Detected' : 'Non-Secure Card Detected'}
+                              </div>
+                              <div className="text-xs mt-1">
+                                {securityStatus === 'secure'
+                                  ? 'This card uses SDM cryptographic verification (CMAC parameter detected)'
+                                  : 'This card does not use SDM security features'
+                                }
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      )}
                       {isChromeAndroid ? (
                         <>
                           <button
@@ -334,7 +481,7 @@ export default function CardsPage() {
 
                   <button
                     type="submit"
-                    disabled={loading || !cardUid.trim()}
+                    disabled={loading || !cardUid.trim() || !cardName.trim()}
                     className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {loading ? 'Claiming Card...' : 'Claim Card'}
@@ -351,12 +498,29 @@ export default function CardsPage() {
                       <div key={card.id} className="bg-gray-50 rounded-lg p-3">
                         <div className="flex items-start justify-between gap-3">
                           <div className="flex-1 min-w-0">
-                            <div className="font-medium text-gray-900 break-all">
-                              {card.ntag_uid}
+                            <div className="flex items-center gap-2 mb-1">
+                              <div className="font-semibold text-gray-900">
+                                {card.name}
+                              </div>
+                              <div className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                card.is_secure
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {card.is_secure ? '🔒 Secure' : '⚠️ Not Secure'}
+                              </div>
+                            </div>
+                            <div className="text-sm text-gray-600 font-mono break-all">
+                              UID: {card.ntag_uid}
                             </div>
                             <div className="text-sm text-gray-500 mt-1">
                               Added {new Date(card.created_at).toLocaleDateString()}
                             </div>
+                            {!card.is_secure && (
+                              <div className="text-xs text-yellow-700 mt-1">
+                                This card does not use SDM cryptographic verification
+                              </div>
+                            )}
                           </div>
                           <button
                             onClick={() => handleDeleteCard(card.id)}

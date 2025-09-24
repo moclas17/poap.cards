@@ -16,6 +16,8 @@ export async function GET(request: NextRequest) {
       .select(`
         id,
         name,
+        description,
+        image_url,
         poap_codes (
           id,
           is_used
@@ -41,6 +43,8 @@ export async function GET(request: NextRequest) {
       return {
         id: drop.id,
         name: drop.name,
+        description: drop.description,
+        image_url: drop.image_url,
         total,
         used,
         free

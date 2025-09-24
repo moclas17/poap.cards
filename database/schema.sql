@@ -35,7 +35,10 @@ create table poap_codes (
 create table cards (
   id uuid primary key default gen_random_uuid(),
   ntag_uid text unique not null,
+  name text not null,
   owner_address text not null,
+  is_assigned boolean default false,
+  is_secure boolean default false,
   created_at timestamptz default now()
 );
 

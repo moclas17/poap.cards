@@ -28,6 +28,14 @@ export class PoapAuth {
   }
 
   /**
+   * Get the POAP API key
+   */
+  static getApiKey(): string {
+    this.checkEnvVars()
+    return this.API_KEY
+  }
+
+  /**
    * Get a valid POAP access token from database or refresh if expired
    */
   static async getAccessToken(): Promise<string> {
@@ -71,12 +79,13 @@ export class PoapAuth {
       headers: {
         'Content-Type': 'application/json'
       },
-      body: JSON.stringify(payload)
+      body: JSON.stringify(payload),
+      redirect: 'follow'
     })
 
     if (!response.ok) {
       const errorText = await response.text()
-      throw new Error(`POAP token request failed: ${response.status}`)
+      throw new Error(`POAP token request failed: ${response.status} - ${errorText}`)
     }
 
     const data: PoapTokenResponse = await response.json()
@@ -107,23 +116,37 @@ export class PoapAuth {
   /**
    * Make authenticated request to POAP API
    */
-  static async makeAuthenticatedRequest(url: string, options: RequestInit = {}): Promise<Response> {
-    const accessToken = await this.getAccessToken()
+  static async makeAuthenticatedRequest(url: string): Promise<Response> {
+    console.log('Making POAP API request to:', url)
 
-    const headers = {
-      'Accept': 'application/json',
-      'Authorization': `Bearer ${accessToken}`,
-      'X-API-Key': this.API_KEY,
-      ...options.headers
+    try {
+      // Get fresh access token
+      const accessToken = await this.getAccessToken()
+      console.log('Using access token:', accessToken.substring(0, 50) + '...')
+
+      const fetchOptions = {
+        method: 'GET',
+        headers: {
+          accept: 'application/json',
+          authorization: `Bearer ${accessToken}`,
+          'x-api-key': this.API_KEY
+        }
+      }
+
+      const response = await fetch(url, fetchOptions)
+      console.log('POAP API response status:', response.status)
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('POAP API error response:', errorText)
+        throw new Error(`POAP API error: ${response.status} - ${errorText}`)
+      }
+
+      return response
+    } catch (error) {
+      console.error('Error in makeAuthenticatedRequest:', error)
+      throw error
     }
-
-    const finalOptions = {
-      method: 'GET',
-      ...options,
-      headers
-    }
-
-    return fetch(url, finalOptions)
   }
 
   /**

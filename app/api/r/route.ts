@@ -35,10 +35,19 @@ export async function GET(request: NextRequest) {
     }
 
     // Check if card exists
+    // Clean the UID in case it has X suffix
+    let cleanUid = sdmParams.uid.trim()
+    if (cleanUid.includes('X')) {
+      cleanUid = cleanUid.split('X')[0]
+    } else if (cleanUid.includes('x')) {
+      cleanUid = cleanUid.split('x')[0]
+    }
+    cleanUid = cleanUid.toUpperCase()
+
     const { data: card } = await supabaseAdmin
       .from('cards')
       .select('id')
-      .eq('ntag_uid', sdmParams.uid)
+      .eq('ntag_uid', cleanUid)
       .single()
 
     if (!card) {

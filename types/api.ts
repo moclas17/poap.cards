@@ -56,6 +56,8 @@ export interface AssignDropRequest {
 export interface DropStats {
   id: string
   name: string
+  description?: string
+  image_url?: string
   total: number
   used: number
   free: number
