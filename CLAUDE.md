@@ -22,7 +22,6 @@ POAP Card is a Next.js 14+ dApp for dispensing POAPs using NFC cards with NTAG42
 
 ```bash
 # Project setup (when initializing)
-npm init
 npm install # Install dependencies
 
 # Development
@@ -30,9 +29,11 @@ npm run dev     # Start development server
 npm run build   # Build for production
 npm run start   # Start production server
 
-# Testing and linting (add these commands when setting up)
-npm run lint      # Lint code
-npm run typecheck # TypeScript checking
+# Code quality
+npm run lint      # Lint code with Next.js ESLint
+npm run typecheck # TypeScript checking with tsc --noEmit
+
+# Note: No formal test setup currently configured
 ```
 
 ## Database Schema (Supabase)
@@ -63,9 +64,10 @@ Core tables with RLS enabled:
 4. States: `reserved` → `served` → `minted`
 
 ### Core APIs
-- **Auth**: `/api/auth/nonce`, `/api/auth/verify`
-- **Drops**: `/api/drops/me`, `/api/drops/[id]/codes`
-- **Cards**: `/api/cards/claim`, `/api/cards/[cardUid]/assign-drop`
+- **Auth**: `/api/auth/nonce`, `/api/auth/verify`, `/api/auth/auto`, `/api/auth/logout`, `/api/auth/me`
+- **Drops**: `/api/drops/me`, `/api/drops/create`, `/api/drops/preview`, `/api/drops/[id]/codes`
+- **Cards**: `/api/cards/claim`, `/api/cards/my-cards`, `/api/cards/[cardId]`, `/api/cards/[cardId]/assign-drop`
+- **Card Assignments**: `/api/card-assignments/[id]`
 - **NFC Tap**: `/api/r` (public, force-dynamic, Node.js runtime)
 - **Claim**: `/api/claim/confirm` (marks POAP as minted)
 

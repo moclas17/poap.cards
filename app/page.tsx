@@ -25,7 +25,7 @@ export default function HomePage() {
             </h1>
             <p className="text-xl text-gray-600 mb-8 max-w-2xl mx-auto">
               Dispense POAPs with NFC cards using secure dynamic messaging.
-              Connect your wallet to manage your POAP distributions.
+              Connect with your email, social account, or crypto wallet to get started.
             </p>
           </div>
 
