@@ -558,6 +558,31 @@ export default function CardsPage() {
                     </div>
                   </div>
                 </div>
+
+                <div className="mt-6 pt-6 border-t border-gray-200">
+                  <h4 className="text-md font-semibold mb-3 text-gray-800">📺 Video Tutorial</h4>
+                  <div className="bg-gradient-to-r from-red-50 to-pink-50 border border-red-200 rounded-lg p-4">
+                    <div className="mb-4">
+                      <div className="font-medium text-gray-800 mb-2">
+                        How to Set Up Non-Secure NFC Cards
+                      </div>
+                      <p className="text-sm text-gray-600 mb-4">
+                        Watch this step-by-step guide to learn how to configure NFC cards for POAP distribution.
+                      </p>
+                    </div>
+                    <div className="relative w-full" style={{ paddingBottom: '56.25%' }}>
+                      <iframe
+                        className="absolute top-0 left-0 w-full h-full rounded-lg"
+                        src="https://www.youtube.com/embed/9CwQy39IV5Q?si=h_75DtFQENAIb7mz"
+                        title="YouTube video player - How to Set Up Non-Secure NFC Cards"
+                        frameBorder="0"
+                        allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        referrerPolicy="strict-origin-when-cross-origin"
+                        allowFullScreen
+                      />
+                    </div>
+                  </div>
+                </div>
               </div>
             </>
           )}
