@@ -14,4 +14,9 @@
   .card {
     @apply bg-white rounded-xl shadow-sm border border-gray-200 p-6;
   }
+
+  .mobile-nav-tab {
+    padding-top: 1rem;
+    padding-bottom: 0.4rem;
+  }
 }

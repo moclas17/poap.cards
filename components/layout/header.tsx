@@ -3,12 +3,10 @@
 import { useAppKit, useAppKitAccount } from '@reown/appkit/react'
 import Link from 'next/link'
 import { ConnectButton } from '@/components/ui/connect-button'
-import { useState, useEffect } from 'react'
 
 export function Header() {
   const { address, isConnected } = useAppKitAccount()
   const { open } = useAppKit()
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
   const handleWalletClick = () => {
     open()
@@ -19,8 +17,8 @@ export function Header() {
       <div className="container mx-auto px-4 py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link href="/" className="flex items-center space-x-2">
-            <div className="text-xl md:text-2xl font-bold">
+          <Link href="/" className="flex items-center">
+            <div className="text-xl md:text-2xl font-bold tracking-wide">
               <span className="text-purple-400">P</span>
               <span className="text-green-400">O</span>
               <span className="text-blue-400">A</span>
@@ -83,39 +81,29 @@ export function Header() {
             ) : (
               <ConnectButton />
             )}
-
-            {/* Mobile menu toggle */}
-            {isConnected && (
-              <button
-                className="md:hidden p-2"
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-              >
-                ☰
-              </button>
-            )}
           </div>
         </div>
+      </div>
 
-        {/* Mobile Navigation Menu */}
-        {isMobileMenuOpen && isConnected && (
-          <nav className="md:hidden mt-4 pt-4 border-t space-y-2">
+      {/* Mobile Navigation - Tab style */}
+      {isConnected && (
+        <div className="md:hidden">
+          <nav className="flex justify-center space-x-0 px-4">
             <Link
               href="/drops"
-              className="block py-2 text-gray-600 hover:text-purple-600"
-              onClick={() => setIsMobileMenuOpen(false)}
+              className="bg-purple-50 hover:bg-purple-100 text-purple-700 hover:text-purple-800 px-4 mobile-nav-tab rounded-tl-lg font-medium transition-all duration-200 border-t border-l border-purple-200 hover:border-purple-300 text-sm flex-1 text-center max-w-32"
             >
-              My Drops
+              📦 My Drops
             </Link>
             <Link
               href="/cards"
-              className="block py-2 text-gray-600 hover:text-purple-600"
-              onClick={() => setIsMobileMenuOpen(false)}
+              className="bg-blue-50 hover:bg-blue-100 text-blue-700 hover:text-blue-800 px-4 mobile-nav-tab rounded-tr-lg font-medium transition-all duration-200 border-t border-r border-blue-200 hover:border-blue-300 text-sm flex-1 text-center max-w-32"
             >
-              My Cards
+              📱 My Cards
             </Link>
           </nav>
-        )}
-      </div>
+        </div>
+      )}
     </header>
   )
 }
