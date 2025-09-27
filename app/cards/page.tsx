@@ -538,11 +538,36 @@ export default function CardsPage() {
               {/* Instructions */}
               <div className="card">
                 <h3 className="text-lg font-semibold mb-3">How to Use NFC Cards</h3>
+
+                {/* Supported Card Types */}
+                <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-medium text-blue-800 mb-3">📱 Supported NFC Card Types</h4>
+                  <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-600 font-bold">✓</span>
+                      <div>
+                        <div className="font-medium text-gray-800">NTAG424 DNA (Secure)</div>
+                        <div className="text-gray-600">Cryptographic verification, clone-resistant</div>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <span className="text-green-600 font-bold">✓</span>
+                      <div>
+                        <div className="font-medium text-gray-800">NTAG215/216/213 (Basic)</div>
+                        <div className="text-gray-600">Standard NFC cards, easy to set up</div>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="mt-3 text-xs text-blue-700">
+                    💡 Both card types work with POAP Cards. Choose NTAG424 DNA for maximum security at events.
+                  </div>
+                </div>
+
                 <div className="space-y-3 text-sm text-gray-600">
                   <div className="flex items-start space-x-3">
                     <div className="bg-primary text-white rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold mt-0.5">1</div>
                     <div>
-                      <strong>Claim your card:</strong> Enter the UID printed on your NTAG424 DNA card to claim ownership
+                      <strong>Claim your card:</strong> Enter the UID of your NFC card (any supported type) to claim ownership
                     </div>
                   </div>
                   <div className="flex items-start space-x-3">

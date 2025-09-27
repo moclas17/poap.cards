@@ -51,6 +51,9 @@ function getClaimedByDisplay(code: PoapCode): string {
   return '—'
 }
 
+type SortField = 'index' | 'code' | 'status' | 'claimedBy' | 'claimedDate'
+type SortDirection = 'asc' | 'desc'
+
 export default function DropDetailPage() {
   const params = useParams()
   const { isConnected } = useAppKitAccount()
@@ -62,6 +65,8 @@ export default function DropDetailPage() {
   const [selectedCard, setSelectedCard] = useState<string>('')
   const [assignedCards, setAssignedCards] = useState<Card[]>([])
   const [exportLoading, setExportLoading] = useState(false)
+  const [sortField, setSortField] = useState<SortField>('index')
+  const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
   useEffect(() => {
     if (isConnected && params.id) {
@@ -256,6 +261,47 @@ export default function DropDetailPage() {
 
   const usedCodes = codes.filter(code => code.is_used).length
   const availableCodes = codes.length - usedCodes
+
+  const handleSort = (field: SortField) => {
+    if (sortField === field) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc')
+    } else {
+      setSortField(field)
+      setSortDirection('asc')
+    }
+  }
+
+  const sortedCodes = [...codes].sort((a, b) => {
+    const direction = sortDirection === 'asc' ? 1 : -1
+
+    switch (sortField) {
+      case 'index':
+        const indexA = codes.indexOf(a)
+        const indexB = codes.indexOf(b)
+        return (indexA - indexB) * direction
+
+      case 'code':
+        return a.qr_hash.localeCompare(b.qr_hash) * direction
+
+      case 'status':
+        const statusA = a.is_used ? 1 : 0
+        const statusB = b.is_used ? 1 : 0
+        return (statusA - statusB) * direction
+
+      case 'claimedBy':
+        const claimedByA = getClaimedByDisplay(a)
+        const claimedByB = getClaimedByDisplay(b)
+        return claimedByA.localeCompare(claimedByB) * direction
+
+      case 'claimedDate':
+        const dateA = a.used_at ? new Date(a.used_at).getTime() : 0
+        const dateB = b.used_at ? new Date(b.used_at).getTime() : 0
+        return (dateA - dateB) * direction
+
+      default:
+        return 0
+    }
+  })
 
   const exportCodes = async (format: 'csv' | 'json') => {
     setExportLoading(true)
@@ -489,17 +535,72 @@ export default function DropDetailPage() {
 
             {/* Table Header */}
             <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700 mb-2">
-              <div className="col-span-1">#</div>
-              <div className="col-span-3">Code</div>
-              <div className="col-span-2">Status</div>
-              <div className="col-span-3">Claimed By</div>
-              <div className="col-span-2">Claimed Date</div>
+              <button
+                onClick={() => handleSort('index')}
+                className="col-span-1 text-left hover:text-primary transition-colors flex items-center gap-1"
+              >
+                #
+                {sortField === 'index' && (
+                  <span className="text-xs">
+                    {sortDirection === 'asc' ? '▲' : '▼'}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => handleSort('code')}
+                className="col-span-3 text-left hover:text-primary transition-colors flex items-center gap-1"
+              >
+                Code
+                {sortField === 'code' && (
+                  <span className="text-xs">
+                    {sortDirection === 'asc' ? '▲' : '▼'}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => handleSort('status')}
+                className="col-span-2 text-left hover:text-primary transition-colors flex items-center gap-1"
+              >
+                Status
+                {sortField === 'status' && (
+                  <span className="text-xs">
+                    {sortDirection === 'asc' ? '▲' : '▼'}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => handleSort('claimedBy')}
+                className="col-span-3 text-left hover:text-primary transition-colors flex items-center gap-1"
+              >
+                Claimed By
+                {sortField === 'claimedBy' && (
+                  <span className="text-xs">
+                    {sortDirection === 'asc' ? '▲' : '▼'}
+                  </span>
+                )}
+              </button>
+
+              <button
+                onClick={() => handleSort('claimedDate')}
+                className="col-span-2 text-left hover:text-primary transition-colors flex items-center gap-1"
+              >
+                Claimed Date
+                {sortField === 'claimedDate' && (
+                  <span className="text-xs">
+                    {sortDirection === 'asc' ? '▲' : '▼'}
+                  </span>
+                )}
+              </button>
+
               <div className="col-span-1">Actions</div>
             </div>
 
             {/* Mobile/Desktop Responsive List */}
             <div className="space-y-2">
-              {codes.map((code, index) => (
+              {sortedCodes.map((code, index) => (
                 <div
                   key={code.id}
                   className={`p-3 rounded-lg border ${
@@ -512,7 +613,7 @@ export default function DropDetailPage() {
                   <div className="hidden md:grid grid-cols-12 gap-4 items-center">
                     <div className="col-span-1">
                       <span className="text-sm font-mono text-gray-500">
-                        #{String(index + 1).padStart(3, '0')}
+                        #{String(sortField === 'index' ? (codes.indexOf(code) + 1) : (index + 1)).padStart(3, '0')}
                       </span>
                     </div>
 
@@ -571,7 +672,7 @@ export default function DropDetailPage() {
                   <div className="md:hidden">
                     <div className="flex items-center justify-between mb-2">
                       <span className="text-sm font-mono text-gray-500">
-                        #{String(index + 1).padStart(3, '0')}
+                        #{String(sortField === 'index' ? (codes.indexOf(code) + 1) : (index + 1)).padStart(3, '0')}
                       </span>
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         code.is_used

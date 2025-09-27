@@ -23,12 +23,33 @@ export async function GET(request: NextRequest) {
     const cronSecret = process.env.CRON_SECRET
     const vercelCronHeader = request.headers.get('x-vercel-cron')
 
+    // Debug logs
+    console.log('🔍 CRON DEBUG INFO:')
+    console.log('authHeader:', authHeader)
+    console.log('cronSecret exists:', !!cronSecret)
+    console.log('cronSecret length:', cronSecret?.length)
+    console.log('vercelCronHeader:', vercelCronHeader)
+    console.log('expected Bearer format:', `Bearer ${cronSecret}`)
+    console.log('authHeader matches:', authHeader === `Bearer ${cronSecret}`)
+
     // Allow Vercel Cron calls or manual calls with correct secret
     const isVercelCron = vercelCronHeader === '1'
     const isAuthorizedManual = cronSecret && authHeader === `Bearer ${cronSecret}`
 
+    console.log('isVercelCron:', isVercelCron)
+    console.log('isAuthorizedManual:', isAuthorizedManual)
+
     if (!isVercelCron && !isAuthorizedManual) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
+      return NextResponse.json({
+        error: 'Unauthorized',
+        debug: {
+          hasAuthHeader: !!authHeader,
+          hasCronSecret: !!cronSecret,
+          hasVercelCron: !!vercelCronHeader,
+          authHeaderReceived: authHeader,
+          expectedFormat: `Bearer ${cronSecret}`
+        }
+      }, { status: 401 })
     }
 
 
