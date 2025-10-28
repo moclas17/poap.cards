@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { verifySiweSignature, createSiweMessage } from '@/lib/auth/siwe'
 import { setAuthCookie } from '@/lib/auth/jwt'
 import { supabaseAdmin } from '@/lib/supabase/admin'
+import { resolveEnsName } from '@/lib/ens/resolve'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
@@ -37,11 +38,34 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Upsert user in database
+    const lowerAddress = address.toLowerCase()
+
+    // Check if user already exists
+    const { data: existingUser } = await supabaseAdmin
+      .from('users')
+      .select('id, ens')
+      .eq('address', lowerAddress)
+      .single()
+
+    // Resolve ENS name if user is new or doesn't have ENS set
+    let ensName: string | null = existingUser?.ens || null
+
+    if (!existingUser || !ensName) {
+      console.log(`Resolving ENS for ${lowerAddress}...`)
+      ensName = await resolveEnsName(lowerAddress)
+      if (ensName) {
+        console.log(`ENS resolved: ${ensName}`)
+      }
+    }
+
+    // Upsert user in database with ENS
     const { error: upsertError } = await supabaseAdmin
       .from('users')
       .upsert(
-        { address: address.toLowerCase() },
+        {
+          address: lowerAddress,
+          ens: ensName
+        },
         { onConflict: 'address' }
       )
 
