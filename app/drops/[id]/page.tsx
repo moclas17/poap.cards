@@ -582,7 +582,7 @@ export default function DropDetailPage() {
             </div>
 
             {/* Table Header */}
-            <div className="hidden md:grid grid-cols-12 gap-4 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700 mb-2">
+            <div className="hidden md:grid grid-cols-12 gap-3 px-4 py-2 bg-gray-50 rounded-lg text-sm font-medium text-gray-700 mb-2">
               <button
                 onClick={() => handleSort('index')}
                 className="col-span-1 text-left hover:text-primary transition-colors flex items-center gap-1"
@@ -597,7 +597,7 @@ export default function DropDetailPage() {
 
               <button
                 onClick={() => handleSort('code')}
-                className="col-span-3 text-left hover:text-primary transition-colors flex items-center gap-1"
+                className="col-span-2 text-left hover:text-primary transition-colors flex items-center gap-1"
               >
                 Code
                 {sortField === 'code' && (
@@ -621,7 +621,7 @@ export default function DropDetailPage() {
 
               <button
                 onClick={() => handleSort('claimedBy')}
-                className="col-span-3 text-left hover:text-primary transition-colors flex items-center gap-1"
+                className="col-span-4 text-left hover:text-primary transition-colors flex items-center gap-1"
               >
                 Claimed By
                 {sortField === 'claimedBy' && (
@@ -635,7 +635,7 @@ export default function DropDetailPage() {
                 onClick={() => handleSort('claimedDate')}
                 className="col-span-2 text-left hover:text-primary transition-colors flex items-center gap-1"
               >
-                Claimed Date
+                Date
                 {sortField === 'claimedDate' && (
                   <span className="text-xs">
                     {sortDirection === 'asc' ? '▲' : '▼'}
@@ -643,7 +643,7 @@ export default function DropDetailPage() {
                 )}
               </button>
 
-              <div className="col-span-1">Actions</div>
+              <div className="col-span-1 text-center">Link</div>
             </div>
 
             {/* Mobile/Desktop Responsive List */}
@@ -658,14 +658,14 @@ export default function DropDetailPage() {
                   }`}
                 >
                   {/* Desktop Table Layout */}
-                  <div className="hidden md:grid grid-cols-12 gap-4 items-center">
+                  <div className="hidden md:grid grid-cols-12 gap-3 items-center">
                     <div className="col-span-1">
                       <span className="text-sm font-mono text-gray-500">
                         #{String(sortField === 'index' ? (codes.indexOf(code) + 1) : (index + 1)).padStart(3, '0')}
                       </span>
                     </div>
 
-                    <div className="col-span-3">
+                    <div className="col-span-2">
                       <div className="font-mono text-sm text-gray-800 truncate">
                         {code.qr_hash}
                       </div>
@@ -681,9 +681,9 @@ export default function DropDetailPage() {
                       </span>
                     </div>
 
-                    <div className="col-span-3">
+                    <div className="col-span-4">
                       {code.is_used ? (
-                        <div className="text-sm text-gray-800">
+                        <div className="text-sm text-gray-800 truncate" title={getClaimedByDisplay(code)}>
                           {getClaimedByDisplay(code)}
                         </div>
                       ) : (
@@ -701,7 +701,7 @@ export default function DropDetailPage() {
                       )}
                     </div>
 
-                    <div className="col-span-1">
+                    <div className="col-span-1 text-center">
                       {!code.is_used && (
                         <a
                           href={code.claim_url}
@@ -710,7 +710,7 @@ export default function DropDetailPage() {
                           className="text-primary hover:underline text-xs"
                           title="View Claim Link"
                         >
-                          Link
+                          🔗
                         </a>
                       )}
                     </div>
