@@ -117,6 +117,13 @@ export function NewDropForm({ isOpen, onClose, onSuccess }: NewDropFormProps) {
         throw new Error('Failed to create drop')
       }
 
+      const result = await response.json()
+
+      // Show success message with stats
+      if (result.drop.claimed_codes > 0) {
+        alert(`Drop created successfully!\n\nTotal codes: ${result.drop.total_codes}\nAvailable: ${result.drop.available_codes}\nAlready claimed: ${result.drop.claimed_codes}`)
+      }
+
       onSuccess()
       onClose()
       resetForm()

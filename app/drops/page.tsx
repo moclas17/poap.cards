@@ -21,6 +21,11 @@ export default function DropsPage() {
       }
 
       try {
+        // Refresh POAP token first (runs in background, doesn't block)
+        fetch('/api/cron/refresh-poap-token').catch(err => {
+          console.warn('Failed to refresh POAP token:', err)
+        })
+
         // Auto authenticate first
         const authResponse = await fetch('/api/auth/auto', {
           method: 'POST',

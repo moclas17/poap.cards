@@ -102,16 +102,49 @@ export async function POST(request: NextRequest) {
       )
     }
 
-    // Create POAP codes
-    const poapCodes = urls.map(url => {
-      const hash = extractPoapHash(url) || crypto.randomUUID()
-      return {
-        drop_id: drop.id,
-        claim_url: url,
-        qr_hash: hash,
-        is_used: false
-      }
-    })
+    // Create POAP codes and check claim status for each
+    console.log('🔍 Checking claim status for all POAP codes...')
+    const { PoapAuth } = await import('@/lib/poap/auth')
+
+    const poapCodes = await Promise.all(
+      urls.map(async (url) => {
+        const hash = extractPoapHash(url) || crypto.randomUUID()
+
+        // Check claim status from POAP API
+        let claimData = null
+        try {
+          const metadata = await PoapAuth.getPoapMetadata(hash)
+          claimData = metadata
+        } catch (error) {
+          console.warn(`Could not fetch claim status for ${hash}:`, error)
+        }
+
+        // Build the code object with claim status
+        const code: any = {
+          drop_id: drop.id,
+          claim_url: url,
+          qr_hash: hash,
+          is_used: claimData?.claimed === true,
+        }
+
+        // If claimed, add the claim details
+        if (claimData?.claimed) {
+          if (claimData.user_input) {
+            code.used_by_email = claimData.user_input
+          }
+          if (claimData.claimed_date) {
+            code.used_at = claimData.claimed_date
+          }
+          console.log(`  ✓ ${hash}: Already claimed ${claimData.user_input ? `by ${claimData.user_input}` : ''}`)
+        } else {
+          console.log(`  ○ ${hash}: Available`)
+        }
+
+        return code
+      })
+    )
+
+    console.log('🔍 Claim status check complete. Inserting codes...')
 
     const { error: codesError } = await supabaseAdmin
       .from('poap_codes')
@@ -132,13 +165,21 @@ export async function POST(request: NextRequest) {
       )
     }
 
+    // Calculate stats
+    const alreadyClaimed = poapCodes.filter(c => c.is_used).length
+    const available = poapCodes.length - alreadyClaimed
+
+    console.log(`✅ Drop created: ${poapCodes.length} total, ${available} available, ${alreadyClaimed} already claimed`)
+
     return NextResponse.json({
       success: true,
       drop: {
         id: drop.id,
         name: drop.name,
         description: drop.description,
-        total_codes: urls.length
+        total_codes: urls.length,
+        available_codes: available,
+        claimed_codes: alreadyClaimed
       }
     })
 

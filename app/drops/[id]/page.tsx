@@ -65,6 +65,7 @@ export default function DropDetailPage() {
   const [selectedCard, setSelectedCard] = useState<string>('')
   const [assignedCards, setAssignedCards] = useState<Card[]>([])
   const [exportLoading, setExportLoading] = useState(false)
+  const [refreshLoading, setRefreshLoading] = useState(false)
   const [sortField, setSortField] = useState<SortField>('index')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
 
@@ -325,6 +326,37 @@ export default function DropDetailPage() {
     }
   }
 
+  const refreshClaimStatus = async () => {
+    if (!confirm('This will check POAP API for the latest claim status of all codes. Continue?')) {
+      return
+    }
+
+    setRefreshLoading(true)
+    try {
+      const response = await fetch(`/api/drops/${params.id}/refresh-claims`, {
+        method: 'POST'
+      })
+
+      if (!response.ok) throw new Error('Failed to refresh claim status')
+
+      const result = await response.json()
+
+      if (result.stats.newlyClaimed > 0) {
+        alert(`Refresh complete!\n\nNewly claimed: ${result.stats.newlyClaimed}\nTotal checked: ${result.stats.total}\n\nThe codes list will be updated automatically.`)
+      } else {
+        alert(`Refresh complete!\n\nNo new claims found.\nTotal checked: ${result.stats.total}`)
+      }
+
+      // Refresh the codes list
+      await fetchCodes()
+      await fetchDropDetails()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Refresh failed')
+    } finally {
+      setRefreshLoading(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-card-c/20 via-card-a/20 to-card-r/20">
       <Header />
@@ -496,6 +528,13 @@ export default function DropDetailPage() {
               <h2 className="text-xl font-semibold text-gray-800">POAP Codes ({codes.length})</h2>
               <div className="flex space-x-2">
                 <button
+                  onClick={refreshClaimStatus}
+                  disabled={refreshLoading || codes.length === 0}
+                  className="btn-primary text-sm disabled:opacity-50"
+                >
+                  {refreshLoading ? 'Refreshing...' : '🔄 Refresh Status'}
+                </button>
+                <button
                   onClick={() => exportCodes('csv')}
                   disabled={exportLoading || codes.length === 0}
                   className="btn-secondary text-sm disabled:opacity-50"
@@ -515,21 +554,30 @@ export default function DropDetailPage() {
             {/* Mobile Header */}
             <div className="md:hidden mb-4">
               <h2 className="text-lg font-semibold text-gray-800 mb-3">POAP Codes ({codes.length})</h2>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="space-y-2">
                 <button
-                  onClick={() => exportCodes('csv')}
-                  disabled={exportLoading || codes.length === 0}
-                  className="btn-secondary text-sm disabled:opacity-50"
+                  onClick={refreshClaimStatus}
+                  disabled={refreshLoading || codes.length === 0}
+                  className="btn-primary text-sm disabled:opacity-50 w-full"
                 >
-                  {exportLoading ? 'Exporting...' : 'CSV'}
+                  {refreshLoading ? 'Refreshing...' : '🔄 Refresh Status'}
                 </button>
-                <button
-                  onClick={() => exportCodes('json')}
-                  disabled={exportLoading || codes.length === 0}
-                  className="btn-secondary text-sm disabled:opacity-50"
-                >
-                  {exportLoading ? 'Exporting...' : 'JSON'}
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => exportCodes('csv')}
+                    disabled={exportLoading || codes.length === 0}
+                    className="btn-secondary text-sm disabled:opacity-50"
+                  >
+                    {exportLoading ? 'Exporting...' : 'CSV'}
+                  </button>
+                  <button
+                    onClick={() => exportCodes('json')}
+                    disabled={exportLoading || codes.length === 0}
+                    className="btn-secondary text-sm disabled:opacity-50"
+                  >
+                    {exportLoading ? 'Exporting...' : 'JSON'}
+                  </button>
+                </div>
               </div>
             </div>
 
