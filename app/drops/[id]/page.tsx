@@ -341,10 +341,18 @@ export default function DropDetailPage() {
 
       const result = await response.json()
 
+      const messages = []
       if (result.stats.newlyClaimed > 0) {
-        alert(`Refresh complete!\n\nNewly claimed: ${result.stats.newlyClaimed}\nTotal checked: ${result.stats.total}\n\nThe codes list will be updated automatically.`)
+        messages.push(`Newly claimed: ${result.stats.newlyClaimed}`)
+      }
+      if (result.stats.ensUpdated > 0) {
+        messages.push(`ENS names resolved: ${result.stats.ensUpdated}`)
+      }
+
+      if (messages.length > 0) {
+        alert(`Refresh complete!\n\n${messages.join('\n')}\nTotal checked: ${result.stats.total}\n\nThe codes list will be updated automatically.`)
       } else {
-        alert(`Refresh complete!\n\nNo new claims found.\nTotal checked: ${result.stats.total}`)
+        alert(`Refresh complete!\n\nNo new claims or ENS updates found.\nTotal checked: ${result.stats.total}`)
       }
 
       // Refresh the codes list

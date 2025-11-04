@@ -2,17 +2,18 @@ import { NextRequest, NextResponse } from 'next/server'
 import { requireAuth } from '@/lib/auth/require-auth'
 import { supabaseAdmin } from '@/lib/supabase/admin'
 import { PoapAuth } from '@/lib/poap/auth'
+import { resolveEnsName } from '@/lib/ens/resolve'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAuth()
-    const dropId = params.id
+    const { id: dropId } = await params
 
     // Verify the drop belongs to the user
     const { data: drop, error: dropError } = await supabaseAdmin
@@ -46,6 +47,7 @@ export async function POST(
 
     let updated = 0
     let newlyClaimed = 0
+    let ensUpdated = 0
     let errors = 0
 
     // Check each code's status
@@ -63,14 +65,50 @@ export async function POST(
           needsUpdate = true
           newlyClaimed++
 
+          // Add email if available
           if (metadata.user_input) {
             updateData.used_by_email = metadata.user_input
           }
+
+          // Add claim date
           if (metadata.claimed_date) {
             updateData.used_at = metadata.claimed_date
           }
 
-          console.log(`  ✓ ${code.qr_hash}: Newly claimed ${metadata.user_input ? `by ${metadata.user_input}` : ''}`)
+          // Add beneficiary address and resolve ENS if available
+          if (metadata.beneficiary) {
+            updateData.used_by_address = metadata.beneficiary.toLowerCase()
+
+            // Try to resolve ENS name
+            try {
+              const ensName = await resolveEnsName(metadata.beneficiary)
+              if (ensName) {
+                updateData.used_by_ens = ensName
+                console.log(`  ✓ ${code.qr_hash}: Newly claimed by ${ensName} (${metadata.beneficiary})`)
+              } else {
+                console.log(`  ✓ ${code.qr_hash}: Newly claimed by ${metadata.beneficiary}`)
+              }
+            } catch (error) {
+              console.log(`  ✓ ${code.qr_hash}: Newly claimed by ${metadata.beneficiary} (ENS resolution failed)`)
+            }
+          } else if (metadata.user_input) {
+            console.log(`  ✓ ${code.qr_hash}: Newly claimed by ${metadata.user_input}`)
+          } else {
+            console.log(`  ✓ ${code.qr_hash}: Newly claimed`)
+          }
+        } else if (metadata.claimed && code.is_used && !code.used_by_ens && metadata.beneficiary) {
+          // Code is already claimed but missing ENS - try to resolve it
+          try {
+            const ensName = await resolveEnsName(metadata.beneficiary)
+            if (ensName) {
+              updateData.used_by_ens = ensName
+              needsUpdate = true
+              ensUpdated++
+              console.log(`  🔍 ${code.qr_hash}: ENS resolved to ${ensName} (${metadata.beneficiary})`)
+            }
+          } catch (error) {
+            console.log(`  🔍 ${code.qr_hash}: ENS resolution failed for ${metadata.beneficiary}`)
+          }
         } else if (!metadata.claimed && code.is_used) {
           // Code was marked as used but POAP says it's not claimed
           // This shouldn't happen, but we'll log it
@@ -97,7 +135,7 @@ export async function POST(
       }
     }
 
-    console.log(`✅ Refresh complete: ${updated} updated, ${newlyClaimed} newly claimed, ${errors} errors`)
+    console.log(`✅ Refresh complete: ${updated} updated, ${newlyClaimed} newly claimed, ${ensUpdated} ENS resolved, ${errors} errors`)
 
     return NextResponse.json({
       success: true,
@@ -105,6 +143,7 @@ export async function POST(
         total: codes.length,
         updated,
         newlyClaimed,
+        ensUpdated,
         errors
       }
     })
