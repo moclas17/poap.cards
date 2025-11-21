@@ -68,6 +68,9 @@ export default function DropDetailPage() {
   const [refreshLoading, setRefreshLoading] = useState(false)
   const [sortField, setSortField] = useState<SortField>('index')
   const [sortDirection, setSortDirection] = useState<SortDirection>('asc')
+  const [showAddCodesModal, setShowAddCodesModal] = useState(false)
+  const [uploadingCodes, setUploadingCodes] = useState(false)
+  const [uploadResult, setUploadResult] = useState<string | null>(null)
 
   useEffect(() => {
     if (isConnected && params.id) {
@@ -365,6 +368,54 @@ export default function DropDetailPage() {
     }
   }
 
+  const handleAddCodes = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault()
+    setUploadingCodes(true)
+    setUploadResult(null)
+
+    try {
+      const formData = new FormData(e.currentTarget)
+      const response = await fetch(`/api/drops/${params.id}/add-codes`, {
+        method: 'POST',
+        body: formData
+      })
+
+      const result = await response.json()
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Failed to add codes')
+      }
+
+      // Show success message
+      const messages = [
+        `Successfully added ${result.added} new codes!`,
+        `Available: ${result.available}`,
+        `Already claimed: ${result.claimed}`
+      ]
+
+      if (result.duplicatesSkipped > 0) {
+        messages.push(`Duplicates skipped: ${result.duplicatesSkipped}`)
+      }
+
+      setUploadResult(messages.join('\n'))
+
+      // Refresh data
+      await fetchCodes()
+      await fetchDropDetails()
+
+      // Close modal after 2 seconds
+      setTimeout(() => {
+        setShowAddCodesModal(false)
+        setUploadResult(null)
+      }, 2000)
+
+    } catch (err) {
+      setUploadResult(`Error: ${err instanceof Error ? err.message : 'Unknown error'}`)
+    } finally {
+      setUploadingCodes(false)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-card-c/20 via-card-a/20 to-card-r/20">
       <Header />
@@ -536,6 +587,12 @@ export default function DropDetailPage() {
               <h2 className="text-xl font-semibold text-gray-800">POAP Codes ({codes.length})</h2>
               <div className="flex space-x-2">
                 <button
+                  onClick={() => setShowAddCodesModal(true)}
+                  className="btn-primary text-sm"
+                >
+                  ➕ Add Codes
+                </button>
+                <button
                   onClick={refreshClaimStatus}
                   disabled={refreshLoading || codes.length === 0}
                   className="btn-primary text-sm disabled:opacity-50"
@@ -563,6 +620,12 @@ export default function DropDetailPage() {
             <div className="md:hidden mb-4">
               <h2 className="text-lg font-semibold text-gray-800 mb-3">POAP Codes ({codes.length})</h2>
               <div className="space-y-2">
+                <button
+                  onClick={() => setShowAddCodesModal(true)}
+                  className="btn-primary text-sm w-full"
+                >
+                  ➕ Add Codes
+                </button>
                 <button
                   onClick={refreshClaimStatus}
                   disabled={refreshLoading || codes.length === 0}
@@ -777,6 +840,71 @@ export default function DropDetailPage() {
           </div>
         </div>
       </main>
+
+      {/* Add Codes Modal */}
+      {showAddCodesModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-lg max-w-md w-full p-6">
+            <div className="flex justify-between items-center mb-4">
+              <h3 className="text-xl font-semibold text-gray-800">Add More Codes</h3>
+              <button
+                onClick={() => setShowAddCodesModal(false)}
+                className="text-gray-500 hover:text-gray-700 text-2xl"
+                disabled={uploadingCodes}
+              >
+                ×
+              </button>
+            </div>
+
+            <form onSubmit={handleAddCodes} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Upload POAP Links File
+                </label>
+                <input
+                  type="file"
+                  name="file"
+                  accept=".txt,.csv"
+                  required
+                  disabled={uploadingCodes}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary disabled:opacity-50"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Upload a .txt or .csv file with one POAP link per line
+                </p>
+              </div>
+
+              {uploadResult && (
+                <div className={`p-3 rounded-lg text-sm whitespace-pre-line ${
+                  uploadResult.startsWith('Error')
+                    ? 'bg-red-50 text-red-800'
+                    : 'bg-green-50 text-green-800'
+                }`}>
+                  {uploadResult}
+                </div>
+              )}
+
+              <div className="flex space-x-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddCodesModal(false)}
+                  disabled={uploadingCodes}
+                  className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors disabled:opacity-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingCodes}
+                  className="flex-1 btn-primary disabled:opacity-50"
+                >
+                  {uploadingCodes ? 'Uploading...' : 'Add Codes'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
